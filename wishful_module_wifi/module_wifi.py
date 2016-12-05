@@ -27,8 +27,8 @@ class WifiModule(wishful_module.AgentModule):
         self.power = 1
         self.modulation_rate = 1
 
-    @wishful_module.bind_function(upis.radio.set_power)
-    def set_power(self, power_dBm):
+    @wishful_module.bind_function(upis.radio.set_tx_power)
+    def set_tx_power(self, power_dBm):
 
         self.log.info('setting set_power(): %s->%s' % (str(self.wlan_interface), str(power_dBm)))
 
@@ -44,8 +44,8 @@ class WifiModule(wishful_module.AgentModule):
         self.power = power_dBm
 
 
-    @wishful_module.bind_function(upis.radio.get_power)
-    def get_power(self):
+    @wishful_module.bind_function(upis.radio.get_tx_power)
+    def get_tx_power(self):
         self.log.debug("WIFI Module gets power of interface: {}".format(self.interface))
         return self.power
 
