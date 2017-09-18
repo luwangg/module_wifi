@@ -16,7 +16,6 @@ from datetime import date, datetime
 import json
 
 import wishful_upis as upis
-import wishful_upis.meta_radio as radio
 import wishful_framework as wishful_module
 from wishful_framework.classes import exceptions
 
@@ -161,7 +160,7 @@ class WifiModule(wishful_module.AgentModule):
         return ret_lst
 
 
-    @wishful_module.bind_function(upis.radio.set_rts_threshold)
+    @wishful_module.bind_function(upis.wifi.radio.set_rts_threshold)
     def set_rts_threshold(self, rts_threshold):
         self.log.info('setting set_rts_threshold(): %s->%s' % (str(self.wlan_interface), str(rts_threshold)))
         try:
@@ -205,6 +204,7 @@ class WifiModule(wishful_module.AgentModule):
 
         try:
             [rcode, sout, serr] = self.run_command(cmd_str)
+            self.channel = channel
         except Exception as e:
             fname = inspect.currentframe().f_code.co_name
             self.log.fatal("An error occurred in %s: %s" % (fname, e))
