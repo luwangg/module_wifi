@@ -296,16 +296,16 @@ class WifiModule(wishful_module.AgentModule):
 
         from hostapdconf.parser import HostapdConf
         from hostapdconf import helpers as ha
-        #read start configuration file
+        # read start configuration file
         conf = HostapdConf(file_path)
-        #set wireless interface
+        # set wireless interface
         ha.set_iface(conf, iface)
-        #set wireless channel
+        # set wireless channel
         if (channel > 0 and channel < 166):
             ha.set_channel(conf, channel)
-        #set ESSID
+        # set ESSID
         ha.set_ssid(conf, essid)
-        #write new configuraiton
+        # write new configuraiton
         conf.write()
 
         return True
@@ -317,8 +317,6 @@ class WifiModule(wishful_module.AgentModule):
         cmd_str = 'sudo hostapd -B ' + str(file_path)
         try:
             [rcode, sout, serr] = self.run_command(cmd_str)
-            #sp = subprocess.Popen(cmd_str, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-            #out, err = sp.communicate()
         except Exception as e:
             fname = inspect.currentframe().f_code.co_name
             self.log.fatal("An error occurred in %s: %s" % (fname, e))
@@ -335,13 +333,14 @@ class WifiModule(wishful_module.AgentModule):
         cmd_str = 'ps aux | grep hostapd | wc -l'
         try:
             [rcode, sout, serr] = self.run_command(cmd_str)
+            print([rcode, sout, serr])
         except Exception as e:
             fname = inspect.currentframe().f_code.co_name
             self.log.fatal("An error occurred in %s: %s" % (fname, e))
             raise exceptions.UPIFunctionExecutionFailedException(func_name=fname, err_msg=str(e))
 
-        if (int(sout)>2):
-            cmd_str = 'killall -9 hostapd'
+        if True:
+            cmd_str = 'sudo killall -9 hostapd'
             try:
                 [rcode, sout, serr] = self.run_command(cmd_str)
             except Exception as e:
@@ -359,6 +358,38 @@ class WifiModule(wishful_module.AgentModule):
 
         self.log.info('stop hostapd() completed')
 
+        return True
+
+    @wishful_module.bind_function(upis.wifi.net.switch_channel)
+    def switch_channel(self, new_channel):
+        channelToFreq = {1: 2412,
+                         2: 2417,
+                         3: 2422,
+                         4: 2427,
+                         5: 2432,
+                         6: 2437,
+                         7: 2442,
+                         8: 2447,
+                         9: 2452,
+                         10: 2457,
+                         11: 2462,
+                         12: 2467,
+                         13: 2472,
+                         14: 2484,
+                         }
+
+        freq = channelToFreq[new_channel]
+        self.log.info('switch_channel -> {} ({})'.format(new_channel, freq))
+        cmd_str = 'sudo hostapd_cli -p /var/run/hostapd chan_switch 5 {}'.format(freq)
+
+        try:
+            [rcode, sout, serr] = self.run_command(cmd_str)
+        except Exception as e:
+            fname = inspect.currentframe().f_code.co_name
+            self.log.fatal("An error occurred in %s: %s" % (fname, e))
+            raise exceptions.UPIFunctionExecutionFailedException(func_name=fname, err_msg=str(e))
+
+        self.log.info('switch_channel completed')
         return True
 
     @wishful_module.bind_function(upis.wifi.net.get_info_of_connected_devices)
@@ -486,19 +517,58 @@ class WifiModule(wishful_module.AgentModule):
         return self.get_entry_of_connected_devices('TDLS peer')
 
 
-    @wishful_module.bind_function(upis.wifi.net.connect_to_network)
-    def connect_to_network(self, iface, ssid):
-
-        self.log.info('connecting via to AP with SSID: %s->%s' % (str(self.wlan_interface), str(ssid)))
-
-        cmd_str = 'sudo iwconfig ' + str(iface) + ' essid ' + str(ssid)
-
+    @wishful_module.bind_function(upis.wifi.net.disconnect_from_network)
+    def disconnect_from_network(self, iface):
+        cmd_str = 'sudo killall -9 wpa_supplicant'
         try:
             [rcode, sout, serr] = self.run_command(cmd_str)
         except Exception as e:
-            fname = inspect.currentframe().f_code.co_name
-            self.log.fatal("An error occurred in %s: %s" % (fname, e))
-            raise exceptions.UPIFunctionExecutionFailedException(func_name=fname, err_msg=str(e))
+            pass
+
+        cmd_str = 'sudo iw {} disconnect'.format(iface)
+        try:
+            [rcode, sout, serr] = self.run_command(cmd_str)
+        except Exception as e:
+            pass
+
+        return True
+
+    @wishful_module.bind_function(upis.wifi.net.connect_to_network)
+    def connect_to_network(self, iface, ssid, config_path=None):
+        if config_path:
+            self.log.info('connecting AP with SSID: %s->%s' % (str(iface), str(ssid)))
+
+            cmd_str = 'sudo killall -9 wpa_supplicant'
+            try:
+                [rcode, sout, serr] = self.run_command(cmd_str)
+            except Exception as e:
+                pass
+
+            cmd_str = 'sudo iw {} disconnect'.format(iface)
+            try:
+                [rcode, sout, serr] = self.run_command(cmd_str)
+            except Exception as e:
+                pass
+
+            cmd_str = 'sudo wpa_supplicant -B -Dnl80211 -i {} -c {}'.format(iface, config_path)
+            try:
+                [rcode, sout, serr] = self.run_command(cmd_str)
+            except Exception as e:
+                fname = inspect.currentframe().f_code.co_name
+                self.log.fatal("An error occurred in %s: %s" % (fname, e))
+                raise exceptions.UPIFunctionExecutionFailedException(func_name=fname, err_msg=str(e))
+
+        else:
+            self.log.info('connecting via to AP with SSID: %s->%s' % (str(iface), str(ssid)))
+
+            cmd_str = 'sudo iwconfig ' + str(iface) + ' essid ' + str(ssid)
+
+            try:
+                [rcode, sout, serr] = self.run_command(cmd_str)
+            except Exception as e:
+                fname = inspect.currentframe().f_code.co_name
+                self.log.fatal("An error occurred in %s: %s" % (fname, e))
+                raise exceptions.UPIFunctionExecutionFailedException(func_name=fname, err_msg=str(e))
 
         return True
 
