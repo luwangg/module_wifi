@@ -328,6 +328,7 @@ class WifiModule(wishful_module.AgentModule):
 
     @wishful_module.bind_function(upis.wifi.net.stop_hostapd)
     def stop_hostapd(self):
+        iface = "wlp2s0"
         self.log.info('stop hostapd()')
 
         cmd_str = 'ps aux | grep hostapd | wc -l'
@@ -348,7 +349,15 @@ class WifiModule(wishful_module.AgentModule):
                 self.log.fatal("An error occurred in %s: %s" % (fname, e))
                 raise exceptions.UPIFunctionExecutionFailedException(func_name=fname, err_msg=str(e))
 
-        cmd_str = 'ifconfig wlan0 down; ifconfig wlan0 up'
+        cmd_str = 'ifconfig {} down; ifconfig {} up'.format(iface, iface)
+        try:
+            [rcode, sout, serr] = self.run_command(cmd_str)
+        except Exception as e:
+            fname = inspect.currentframe().f_code.co_name
+            self.log.fatal("An error occurred in %s: %s" % (fname, e))
+            raise exceptions.UPIFunctionExecutionFailedException(func_name=fname, err_msg=str(e))
+
+        cmd_str = 'iw {} set type managed'.format(iface)
         try:
             [rcode, sout, serr] = self.run_command(cmd_str)
         except Exception as e:
@@ -519,12 +528,14 @@ class WifiModule(wishful_module.AgentModule):
 
     @wishful_module.bind_function(upis.wifi.net.disconnect_from_network)
     def disconnect_from_network(self, iface):
-        cmd_str = 'sudo killall -9 wpa_supplicant'
+        self.log.info('Disconnect STA ({}) from any network: %s->%s'.format(str(iface)))
+        cmd_str = 'sudo killall wpa_supplicant'
         try:
             [rcode, sout, serr] = self.run_command(cmd_str)
         except Exception as e:
             pass
 
+        time.sleep(1)
         cmd_str = 'sudo iw {} disconnect'.format(iface)
         try:
             [rcode, sout, serr] = self.run_command(cmd_str)
@@ -538,12 +549,13 @@ class WifiModule(wishful_module.AgentModule):
         if config_path:
             self.log.info('connecting AP with SSID: %s->%s' % (str(iface), str(ssid)))
 
-            cmd_str = 'sudo killall -9 wpa_supplicant'
+            cmd_str = 'sudo killall wpa_supplicant'
             try:
                 [rcode, sout, serr] = self.run_command(cmd_str)
             except Exception as e:
                 pass
 
+            time.sleep(1)
             cmd_str = 'sudo iw {} disconnect'.format(iface)
             try:
                 [rcode, sout, serr] = self.run_command(cmd_str)
