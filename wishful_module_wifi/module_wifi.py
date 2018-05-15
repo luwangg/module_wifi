@@ -29,7 +29,6 @@ class WifiModule(wishful_module.AgentModule):
     def __init__(self):
         super(WifiModule, self).__init__()
         self.log = logging.getLogger('wifi_module.main')
-        self.interface = "wlan0"
         self.wlan_interface = "wlan0"
         self.phy = "phy0"
         self.channel = 1
