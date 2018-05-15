@@ -175,11 +175,17 @@ class WifiModule(wishful_module.AgentModule):
     @wishful_module.bind_function(upis.radio.set_tx_power)
     def set_tx_power(self, power_dBm):
 
-        self.log.info('setting set_power(): %s->%s' % (str(self.wlan_interface), str(power_dBm)))
+        self.log.info('setting set_power(): %s->%s' % (str(self.interface), str(power_dBm)))
 
-        # cmd_str = 'iw dev ' + self.wlan_interface + ' set txpower fixed ' + str(power_dBm) + 'dbm'
+        cmd_str = 'iw dev ' + self.interface + ' set txpower fixed ' + str(power_dBm) + 'dbm'
+        try:
+            [rcode, sout, serr] = self.run_command(cmd_str)
+        except Exception as e:
+            fname = inspect.currentframe().f_code.co_name
+            self.log.fatal("An error occurred in %s: %s" % (fname, e))
+            raise exceptions.UPIFunctionExecutionFailedException(func_name=fname, err_msg=str(e))
+
         cmd_str = 'sudo iwconfig ' + self.interface + ' txpower ' + str(power_dBm)
-
         try:
             [rcode, sout, serr] = self.run_command(cmd_str)
         except Exception as e:
