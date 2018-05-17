@@ -335,7 +335,7 @@ class WifiModule(wishful_module.AgentModule):
 
     @wishful_module.bind_function(upis.wifi.net.stop_hostapd)
     def stop_hostapd(self):
-        iface = "wlp2s0"
+        iface = self.interface
         self.log.info('stop hostapd()')
 
         cmd_str = 'ps aux | grep hostapd | wc -l'
