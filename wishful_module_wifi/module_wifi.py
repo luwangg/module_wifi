@@ -313,6 +313,7 @@ class WifiModule(wishful_module.AgentModule):
         ha.set_ssid(conf, essid)
         # write new configuraiton
         conf.write()
+        self.log.info("Start hostapd with ssid: ", essid)
 
         return True
 
